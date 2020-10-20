@@ -7,9 +7,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/colorGray"
-    tools:context=".MainActivity">
+    tools:context=".CameraActivity">
 
-    <com.example.aicamera.AutoFitTextureView
+    <TextureView
         android:id="@+id/textureView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -52,22 +52,6 @@
             app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@drawable/ic_flash_auto_24px" />
 
-        <!--
-        <ImageButton
-            android:id="@+id/changeButton"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:background="@android:color/transparent"
-            android:onClick="changeCamera"
-            android:scaleType="fitCenter"
-            android:tint="#FFFFFF"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/captureButton"
-            app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_flip_camera_android_24px" />
-            -->
-
         <ImageButton
             android:id="@+id/ratioButton"
             android:layout_width="30dp"
@@ -79,7 +63,7 @@
             app:layout_constraintEnd_toStartOf="@+id/captureButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@drawable/ic_photo_size_select_large_24px" />
+            app:srcCompat="@drawable/ic_ratio_full" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView

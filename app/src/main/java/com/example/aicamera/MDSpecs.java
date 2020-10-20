@@ -32,17 +32,18 @@ public class MDSpecs extends ViewModel {
     private CameraCharacteristics mCameraCharacteristics;
     private String mCameraId;
     private int mFlashMode;
-    private boolean mIsFlashAvailable;
-    private CameraManager mManager;
+    private Boolean mIsFlashAvailable;
+    private final CameraManager mManager;
     private int mRatio = 0;
-    private Rational[] mRatios = new Rational[4];
-    private boolean[] mSupportedFlashModes = new boolean[2];
+    private final Rational[] mRatios = new Rational[4];
+    private final boolean[] mSupportedFlashModes = new boolean[2];
 
     // CONSTRUCTOR
-    MDSpecs(Activity activity) throws CameraAccessException {
+    MDSpecs(Activity activity) {
         mManager = (CameraManager) activity.getSystemService(Activity.CAMERA_SERVICE);
-        initialSetup(activity);
-        mCameraCharacteristics = mManager.getCameraCharacteristics(getCameraId());
+        setupCamera();
+        setupSupportedRatios(activity);
+        setupSupportedFlashModes();
     }
 
     // METHODS
@@ -155,6 +156,10 @@ public class MDSpecs extends ViewModel {
         return false;
     }
 
+    CameraCharacteristics getCameraCharacteristics() {
+        return mCameraCharacteristics;
+    }
+
     String getCameraId() {
         return mCameraId;
     }
@@ -185,7 +190,6 @@ public class MDSpecs extends ViewModel {
         }
         return id;
     }
-
 
     Integer getFlashMode() {
         return mFlashMode;
@@ -227,9 +231,46 @@ public class MDSpecs extends ViewModel {
         return mRatios[mRatio];
     }
 
-    private void initialSetup(Activity activity) {
+    int getRatioDrawable() {
+        Integer id = null;
+        switch(mRatio) {
+            case 0: {
+                id = R.drawable.ic_ratio_full;
+                break;
+            }
+            case 1:
+            case 2:
+            case 3:
+                {
+                Rational ratio = getRatio();
+                if (ratio.getNumerator() == 16) {
+                    id = R.drawable.ic_ratio_16_9;
+                } else if (ratio.getNumerator() == 4) {
+                    id = R.drawable.ic_ratio_4_3;
+                } else {
+                    id = R.drawable.ic_ratio_1_1;
+                }
+                break;
+            }
+        }
+        return id;
+    }
 
-        StreamConfigurationMap map = null;
+    boolean isFlashAvailable() {
+        return mIsFlashAvailable;
+    }
+
+    void resetFlashMode() {
+        if (mSupportedFlashModes[0]) {
+            mFlashMode = AUTO;
+        } else if (mSupportedFlashModes[1]) {
+            mFlashMode = AUTO_RED_EYE;
+        } else {
+            mFlashMode = SINGLE;
+        }
+    }
+
+    private void setupCamera() {
         try {
             String[] cameraIds = mManager.getCameraIdList();
             for (String cameraId : cameraIds) {
@@ -237,14 +278,31 @@ public class MDSpecs extends ViewModel {
                 Integer facing = chars.get(CameraCharacteristics.LENS_FACING);
                 if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
                     mCameraId = cameraId;
+                    mCameraCharacteristics = chars;
                     mIsFlashAvailable = chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                    map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                     break;
                 }
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private void setupSupportedFlashModes() {
+        mSupportedFlashModes[0] = contains(mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
+                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+        mSupportedFlashModes[1] = contains(mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
+                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE);
+        if (mSupportedFlashModes[0]) {
+            mFlashMode = AUTO;
+        } else if (mSupportedFlashModes[1]) {
+            mFlashMode = AUTO_RED_EYE;
+        } else {
+            mFlashMode = SINGLE;
+        }
+    }
+
+    private void setupSupportedRatios(Activity activity) {
 
         boolean[] supportedRatios = new boolean[4];
         supportedRatios[0] = true;
@@ -252,6 +310,7 @@ public class MDSpecs extends ViewModel {
         supportedRatios[2] = false;
         supportedRatios[3] = false;
 
+        StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         assert map != null;
         Size[] options = map.getOutputSizes(ImageFormat.JPEG);
         for (Size option: options) {
@@ -269,14 +328,7 @@ public class MDSpecs extends ViewModel {
         }
 
         Point fullDisplaySize = new Point();
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//            // there is another way
-//        } else {
-//            activity.getWindowManager().getDefaultDisplay().getRealSize(fullDisplaySize);
-//        }
-
         activity.getWindowManager().getDefaultDisplay().getRealSize(fullDisplaySize);
-
         double screenRatioD = 1.0 * fullDisplaySize.y / fullDisplaySize.x;
         Rational screenRatio = calculateRatio(screenRatioD);
 
@@ -319,40 +371,6 @@ public class MDSpecs extends ViewModel {
             } else if (supportedRatios[3]) {
                 mRatios[1] = new Rational(1, 1);
             }
-        }
-        try {
-            setupSupportedFlashModes();
-        } catch (CameraAccessException ignored) {
-
-        }
-    }
-
-    boolean isFlashAvailable() {
-        return mIsFlashAvailable;
-    }
-
-    void resetFlashMode() {
-        if (mSupportedFlashModes[0]) {
-            mFlashMode = AUTO;
-        } else if (mSupportedFlashModes[1]) {
-            mFlashMode = AUTO_RED_EYE;
-        } else {
-            mFlashMode = SINGLE;
-        }
-    }
-
-    private void setupSupportedFlashModes() throws CameraAccessException {
-        CameraCharacteristics chars = mManager.getCameraCharacteristics(mCameraId);
-        mSupportedFlashModes[0] = contains(chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
-                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
-        mSupportedFlashModes[1] = contains(chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES),
-                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH_REDEYE);
-        if (mSupportedFlashModes[0]) {
-            mFlashMode = AUTO;
-        } else if (mSupportedFlashModes[1]) {
-            mFlashMode = AUTO_RED_EYE;
-        } else {
-            mFlashMode = SINGLE;
         }
     }
 

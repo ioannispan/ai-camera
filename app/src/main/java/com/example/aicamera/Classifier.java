@@ -3,6 +3,7 @@ package com.example.aicamera;
 import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.os.Build;
 
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.gpu.GpuDelegate;
@@ -15,35 +16,25 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.PriorityQueue;
 
 class Classifier {
 
-    // CONSTANTS
-    private static final String TAG = "ImageClassifier";
-
     // VARIABLES
-    private double mAccuracyValue;
-    private int mBatchSize;
+    private final double mAccuracyValue;
+    private final int mBatchSize;
     private ByteBuffer mImageData;
-    private float mImageMean;
-    private int mImageSizeX;
-    private int mImageSizeY;
-    private float mImageStd;
-    private boolean mIsModelQuantized;
-    private List<String> mLabelList;
-    private String mLabelPath;
-    private String mModelPath;
-    private int mPixelSize;
-    private int mResultsToShow;
-    private PriorityQueue<Map.Entry<String, Float>> mSortedLabels;
+    private final float mImageMean;
+    private final int mImageSizeX;
+    private final int mImageSizeY;
+    private final float mImageStd;
+    private final boolean mIsModelQuantized;
+    private final List<String> mLabelList;
+    private final String mLabelPath;
+    private final String mModelPath;
+    private final int mPixelSize;
     private Interpreter mTfLite;
 
     // CONSTRUCTOR
@@ -67,22 +58,15 @@ class Classifier {
 
         // other parameters
         mAccuracyValue = 0.2;
-        mResultsToShow = 1;
-        mSortedLabels = new PriorityQueue<>(
-                mResultsToShow,
-                new Comparator<Map.Entry<String, Float>>() {
-                    @Override
-                    public int compare(Map.Entry<String, Float> o1, Map.Entry<String, Float> o2) {
-                        return (o1.getValue()).compareTo(o2.getValue());
-                    }
-                });
 
         Interpreter.Options options = new Interpreter.Options();
         if (useGPU) {
             options.addDelegate(new GpuDelegate());
         }
         if (useNNAPI) {
-            options.setUseNNAPI(true);
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.O_MR1) {
+                options.setUseNNAPI(true);
+            }
         }
         if (numThreads > 0) {
             options.setNumThreads(numThreads);
@@ -94,32 +78,20 @@ class Classifier {
     // METHODS
     String classify(Bitmap bitmap) {
         if (mTfLite == null) {
-            //Log.e(TAG, "Image classifier has not been initialized; Skipped.");
-            return "Uninitialized Classifier.";
+            return "";
         }
-
         String textToShow;
-
         if (mIsModelQuantized) {
             convertBitmapToByteBuffer(bitmap);
             byte[][] labelProbArray = new byte[mBatchSize][mLabelList.size()];
             mTfLite.run(mImageData, labelProbArray);
-            if (mResultsToShow > 1) {
-                textToShow = getSortedResultsByte(labelProbArray);
-            } else {
-                textToShow = getTopResultByte(labelProbArray);
-            }
+            textToShow = getTopResultByte(labelProbArray);
         } else {
             convertBitmapToByteBuffer(bitmap);
             float[][] labelProbArray = new float[mBatchSize][mLabelList.size()];
             mTfLite.run(mImageData, labelProbArray);
-            if (mResultsToShow > 1) {
-                textToShow = getSortedResultsFloat(labelProbArray);
-            } else {
-                textToShow = getTopResultFloat(labelProbArray);
-            }
+            textToShow = getTopResultFloat(labelProbArray);
         }
-
         return textToShow;
     }
 
@@ -164,61 +136,13 @@ class Classifier {
         return mImageSizeY;
     }
 
-    int getNumResults() {
-        return mResultsToShow;
-    }
-
-    private String getSortedResultsByte(byte[][] labelProbArray) {
-        for (int i = 0; i < mLabelList.size(); ++i) {
-            mSortedLabels.add(new AbstractMap.SimpleEntry<>(mLabelList.get(i), (labelProbArray[0][i] & 0xff) / 255.0f));
-            if (mSortedLabels.size() > mResultsToShow) {
-                mSortedLabels.poll();
-            }
-        }
-        StringBuilder textToShow = new StringBuilder();
-        for (int i = 0; i < mResultsToShow; ++i) {
-            Map.Entry<String, Float> label = mSortedLabels.poll();
-            assert label != null;
-            if (label.getValue() > mAccuracyValue) {
-                if (i == mResultsToShow - 1) {
-                    textToShow.insert(0, String.format(Locale.getDefault(), "%s: %4.2f", label.getKey(), label.getValue()));
-                } else {
-                    textToShow.insert(0, String.format(Locale.getDefault(), "\n%s: %4.2f", label.getKey(), label.getValue()));
-                }
-            }
-        }
-        return textToShow.toString();
-    }
-
-    private String getSortedResultsFloat(float[][] labelProbArray) {
-        for (int i = 0; i < mLabelList.size(); ++i) {
-            mSortedLabels.add(new AbstractMap.SimpleEntry<>(mLabelList.get(i), labelProbArray[0][i]));
-            if (mSortedLabels.size() > mResultsToShow) {
-                mSortedLabels.poll();
-            }
-        }
-        StringBuilder textToShow = new StringBuilder();
-        for (int i = 0; i < mResultsToShow; ++i) {
-            Map.Entry<String, Float> label = mSortedLabels.poll();
-            assert label != null;
-            if (label.getValue() > mAccuracyValue) {
-                if (i == mResultsToShow - 1) {
-                    textToShow.insert(0, String.format(Locale.getDefault(), "%s: %4.2f", label.getKey(), label.getValue()));
-                } else {
-                    textToShow.insert(0, String.format(Locale.getDefault(), "\n%s: %4.2f", label.getKey(), label.getValue()));
-                }
-            }
-        }
-        return textToShow.toString();
-    }
-
     private String getTopResultByte(byte[][] labelProbArray) {
         byte[] array = labelProbArray[0];
         List<Byte> list = new ArrayList<>(array.length);
         for (byte b : array) {
             list.add(b);
         }
-        byte value = (byte) Collections.max(list);
+        byte value = Collections.max(list);
         float valueFloat = (value & 0xff) / 255.0f;
         if (valueFloat > mAccuracyValue) {
             int index = list.indexOf(value);
@@ -234,7 +158,7 @@ class Classifier {
         for (float f : array) {
             list.add(f);
         }
-        float value = (float) Collections.max(list);
+        float value = Collections.max(list);
         if (value > mAccuracyValue) {
             int index = list.indexOf(value);
             return mLabelList.get(index);
