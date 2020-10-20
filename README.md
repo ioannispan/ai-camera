@@ -1,6 +1,6 @@
 # AI Camera
 
-AI Camera is an Android camera app that recognizes images from the camera in real time.
+AI Camera is an Android camera app that recognizes images from the device's camera in real time.
 
 This application was developed in the context of my Diploma Thesis as an undergraduate student at National Technical University of Athens.
 
