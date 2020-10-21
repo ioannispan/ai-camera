@@ -41,9 +41,9 @@ class Classifier {
     public Classifier(Activity activity) throws IOException {
 
         // model parameters
-        mModelPath = "efficientnet_lite0_224_quant.tflite";
+        mModelPath = "efficientnet_lite0_224.tflite";
         mLabelPath = "imagenet_labels_1000.txt";
-        mIsModelQuantized = true;
+        mIsModelQuantized = false;
         mImageSizeX = 224;
         mImageSizeY = 224;
         mPixelSize = 3;
