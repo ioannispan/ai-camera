@@ -137,7 +137,6 @@ public class CameraActivity extends AppCompatActivity {
     private ImageButton mFlashButton;
     private String mImageFileLocation;
     private ImageReader mImageReader;
-    private String mLabel = "";
     private Float mMaximumZoomLevel;
     private MDSpecs mMobileDevice;
     private boolean mNoAFRun = false;
@@ -672,12 +671,13 @@ public class CameraActivity extends AppCompatActivity {
         Bitmap bitmap = prepareBitmap();
         String label = mClassifier.classify(bitmap);
         if (!label.isEmpty()) {
-            mLabel = label.substring(0, 1).toUpperCase() + label.substring(1);
+            label = label.substring(0, 1).toUpperCase() + label.substring(1);
         }
+        final String finalLabel = label;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mTextView.setText(mLabel);
+                mTextView.setText(finalLabel);
             }
         });
     }

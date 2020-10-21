@@ -41,11 +41,11 @@ class Classifier {
     public Classifier(Activity activity) throws IOException {
 
         // model parameters
-        mModelPath = "efficientnet_lite4_300.tflite";
+        mModelPath = "efficientnet_lite0_224_quant.tflite";
         mLabelPath = "imagenet_labels_1000.txt";
-        mIsModelQuantized = false;
-        mImageSizeX = 300;
-        mImageSizeY = 300;
+        mIsModelQuantized = true;
+        mImageSizeX = 224;
+        mImageSizeY = 224;
         mPixelSize = 3;
         mBatchSize = 1;
         mImageMean = 127.5f;
@@ -57,7 +57,7 @@ class Classifier {
         int numThreads = 2;
 
         // other parameters
-        mAccuracyValue = 0.2;
+        mAccuracyValue = 0.1;
 
         Interpreter.Options options = new Interpreter.Options();
         if (useGPU) {
